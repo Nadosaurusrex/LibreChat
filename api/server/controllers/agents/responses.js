@@ -14,11 +14,13 @@ const {
   createSafeUser,
   initializeAgent,
   getBalanceConfig,
+  createSummarizeFn,
   recordCollectedUsage,
   getTransactionsConfig,
   createToolExecuteHandler,
   createSummarizeHandler,
   createDeferredPersistSummary,
+  resolveSummarizationLLMConfig,
   // Responses API
   writeDone,
   buildResponse,
@@ -45,12 +47,9 @@ const { loadAgentTools, loadToolsForExecution } = require('~/server/services/Too
 const { findAccessibleResources } = require('~/server/services/PermissionService');
 const { getConvoFiles, saveConvo, getConvo } = require('~/models/Conversation');
 const { spendTokens, spendStructuredTokens } = require('~/models/spendTokens');
+const { getProviderConfig } = require('~/server/services/Endpoints');
 const { getAgent, getAgents } = require('~/models/Agent');
 const db = require('~/models');
-
-const summarizeNotConfigured = async () => {
-  throw new Error('Summarization client is not configured');
-};
 
 /** @type {import('@librechat/api').AppConfig | null} */
 let appConfig = null;
@@ -289,6 +288,52 @@ const createResponse = async (req, res) => {
   const isStreaming = request.stream === true;
   const summarizationConfig = req.config?.summarization;
 
+  const usageTarget = { collectedUsage: /** @type {Array<*>} */ ([]) };
+  let summarizeFn = null;
+  if (summarizationConfig?.enabled === true) {
+    try {
+      const appConfig = req.config;
+      const globalConfig = summarizationConfig;
+      const resolveConfig = (agentIdParam) =>
+        resolveSummarizationLLMConfig({ agentId: agentIdParam, globalConfig });
+      const getProviderOptions = async (resolved) => {
+        const { getOptions, overrideProvider } = getProviderConfig({
+          provider: resolved.provider,
+          appConfig,
+        });
+        const options = await getOptions({
+          req,
+          endpoint: resolved.provider,
+          model_parameters: { model: resolved.model, ...resolved.parameters },
+          db: { getUserKey: db.getUserKey, getUserKeyValues: db.getUserKeyValues },
+        });
+        const provider = options.provider ?? overrideProvider ?? resolved.provider;
+        const clientOptions = { ...options.llmConfig };
+        if (options.configOptions) {
+          clientOptions.configuration = options.configOptions;
+        }
+        delete clientOptions.maxTokens;
+        return { provider, clientOptions, model: resolved.model };
+      };
+      summarizeFn = createSummarizeFn({
+        resolveConfig,
+        getProviderOptions,
+        onUsage: (usage) => {
+          usageTarget.collectedUsage.push({
+            input_tokens: usage.input_tokens ?? 0,
+            output_tokens: usage.output_tokens ?? 0,
+            total_tokens: usage.total_tokens ?? 0,
+          });
+        },
+      });
+    } catch (error) {
+      logger.error(
+        '[Responses API] Failed to configure summarization, continuing without it',
+        error,
+      );
+    }
+  }
+
   // Look up the agent
   const agent = await getAgent({ id: agentId });
   if (!agent) {
@@ -416,6 +461,7 @@ const createResponse = async (req, res) => {
 
       // Collect usage for balance tracking
       const collectedUsage = [];
+      usageTarget.collectedUsage = collectedUsage;
 
       // Built-in handler for processing raw model stream chunks
       const chatModelStreamHandler = new ChatModelStreamHandler();
@@ -449,10 +495,10 @@ const createResponse = async (req, res) => {
       };
 
       const summarizeHandler =
-        summarizationConfig?.enabled === true
+        summarizeFn != null
           ? createSummarizeHandler({
-              customPrompt: summarizationConfig.prompt,
-              summarize: summarizeNotConfigured,
+              customPrompt: summarizationConfig?.prompt,
+              summarize: summarizeFn,
               persistSummary: createDeferredPersistSummary(),
               onStatusChange: async (status) => {
                 if (actuallyStreaming && !res.writableEnded) {
@@ -597,6 +643,7 @@ const createResponse = async (req, res) => {
 
       // Collect usage for balance tracking
       const collectedUsage = [];
+      usageTarget.collectedUsage = collectedUsage;
 
       /** @type {Promise<import('librechat-data-provider').TAttachment | null>[]} */
       const artifactPromises = [];
@@ -619,10 +666,10 @@ const createResponse = async (req, res) => {
       };
 
       const summarizeHandler =
-        summarizationConfig?.enabled === true
+        summarizeFn != null
           ? createSummarizeHandler({
-              customPrompt: summarizationConfig.prompt,
-              summarize: summarizeNotConfigured,
+              customPrompt: summarizationConfig?.prompt,
+              summarize: summarizeFn,
               persistSummary: createDeferredPersistSummary(),
             })
           : null;
