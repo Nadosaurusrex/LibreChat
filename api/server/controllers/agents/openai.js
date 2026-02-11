@@ -17,6 +17,7 @@ const {
   validateRequest,
   initializeAgent,
   getBalanceConfig,
+  getProviderConfig,
   createSummarizeFn,
   createErrorResponse,
   recordCollectedUsage,
@@ -34,7 +35,6 @@ const { loadAgentTools, loadToolsForExecution } = require('~/server/services/Too
 const { createToolEndCallback } = require('~/server/controllers/agents/callbacks');
 const { findAccessibleResources } = require('~/server/services/PermissionService');
 const { spendTokens, spendStructuredTokens } = require('~/models/spendTokens');
-const { getProviderConfig } = require('~/server/services/Endpoints');
 const { getConvoFiles } = require('~/models/Conversation');
 const { getAgent, getAgents } = require('~/models/Agent');
 const db = require('~/models');

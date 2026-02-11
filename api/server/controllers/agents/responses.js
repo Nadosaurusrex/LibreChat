@@ -14,6 +14,7 @@ const {
   createSafeUser,
   initializeAgent,
   getBalanceConfig,
+  getProviderConfig,
   createSummarizeFn,
   recordCollectedUsage,
   getTransactionsConfig,
@@ -47,7 +48,6 @@ const { loadAgentTools, loadToolsForExecution } = require('~/server/services/Too
 const { findAccessibleResources } = require('~/server/services/PermissionService');
 const { getConvoFiles, saveConvo, getConvo } = require('~/models/Conversation');
 const { spendTokens, spendStructuredTokens } = require('~/models/spendTokens');
-const { getProviderConfig } = require('~/server/services/Endpoints');
 const { getAgent, getAgents } = require('~/models/Agent');
 const db = require('~/models');
 
