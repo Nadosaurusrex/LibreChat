@@ -20,7 +20,6 @@ const {
   getTransactionsConfig,
   createToolExecuteHandler,
   createSummarizeHandler,
-  createDeferredPersistSummary,
   resolveSummarizationLLMConfig,
   // Responses API
   writeDone,
@@ -501,7 +500,6 @@ const createResponse = async (req, res) => {
         summarizeFn != null
           ? createSummarizeHandler({
               summarize: summarizeFn,
-              persistSummary: createDeferredPersistSummary(),
               onStatusChange: async (status) => {
                 if (actuallyStreaming && !res.writableEnded) {
                   res.write(`event: on_summarize_status\ndata: ${JSON.stringify(status)}\n\n`);
@@ -671,7 +669,6 @@ const createResponse = async (req, res) => {
         summarizeFn != null
           ? createSummarizeHandler({
               summarize: summarizeFn,
-              persistSummary: createDeferredPersistSummary(),
             })
           : null;
 
