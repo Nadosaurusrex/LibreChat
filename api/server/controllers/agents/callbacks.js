@@ -3,7 +3,6 @@ const { Constants } = require('@librechat/agents');
 const { logger } = require('@librechat/data-schemas');
 const {
   sendEvent,
-  createSummarizeHandler,
   GenerationJobManager,
   writeAttachmentEvent,
   createToolExecuteHandler,
@@ -307,16 +306,31 @@ function getDefaultHandlers({
   }
 
   if (summarizationOptions?.enabled === true) {
-    handlers[GraphEvents.ON_SUMMARIZE] = createSummarizeHandler({
-      summarize: summarizationOptions.summarize,
-      persistSummary: summarizationOptions.persistSummary,
-      onStatusChange: async (status) => {
+    handlers[GraphEvents.ON_SUMMARIZE_START] = {
+      handle: async (_event, data) => {
         await emitEvent(res, streamId, {
-          event: 'on_summarize_status',
-          data: status,
+          event: 'on_summarize_start',
+          data,
         });
       },
-    });
+    };
+    handlers[GraphEvents.ON_SUMMARIZE_DELTA] = {
+      handle: async (_event, data) => {
+        await emitEvent(res, streamId, {
+          event: 'on_summarize_delta',
+          data,
+        });
+        aggregateContent({ event: GraphEvents.ON_SUMMARIZE_DELTA, data });
+      },
+    };
+    handlers[GraphEvents.ON_SUMMARIZE_COMPLETE] = {
+      handle: async (_event, data) => {
+        await emitEvent(res, streamId, {
+          event: 'on_summarize_complete',
+          data,
+        });
+      },
+    };
   }
 
   return handlers;
