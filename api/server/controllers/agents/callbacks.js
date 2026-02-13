@@ -13,6 +13,7 @@ const {
   Providers,
   GraphEvents,
   getMessageId,
+  GraphNodeKeys,
   ToolEndHandler,
   handleToolCalls,
   ChatModelStreamHandler,
@@ -88,6 +89,10 @@ class ModelEndHandler {
         await handleToolCalls(toolCalls, metadata, graph);
       }
 
+      const currentNode = metadata?.langgraph_node;
+      const isSummarizationNode =
+        typeof currentNode === 'string' && currentNode.startsWith(GraphNodeKeys.SUMMARIZE);
+
       const usage = data?.output?.usage_metadata;
       if (!usage) {
         return this.finalize(errorMessage);
@@ -95,6 +100,10 @@ class ModelEndHandler {
       const modelName = metadata?.ls_model_name || agentContext.clientOptions?.model;
       if (modelName) {
         usage.model = modelName;
+      }
+
+      if (isSummarizationNode) {
+        usage.usage_type = 'summarization';
       }
 
       this.collectedUsage.push(usage);

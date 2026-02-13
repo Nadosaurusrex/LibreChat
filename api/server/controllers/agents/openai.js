@@ -3,6 +3,7 @@ const { logger } = require('@librechat/data-schemas');
 const { EModelEndpoint, ResourceType, PermissionBits } = require('librechat-data-provider');
 const {
   Callback,
+  GraphNodeKeys,
   ToolEndHandler,
   formatAgentMessages,
   ChatModelStreamHandler,
@@ -437,15 +438,24 @@ const OpenAIChatCompletionController = async (req, res) => {
       }),
 
       // Usage tracking
-      on_chat_model_end: createHandler((data) => {
-        const usage = data?.output?.usage_metadata;
-        if (usage) {
-          collectedUsage.push(usage);
-          const target = isStreaming ? tracker : aggregator;
-          target.usage.promptTokens += usage.input_tokens ?? 0;
-          target.usage.completionTokens += usage.output_tokens ?? 0;
-        }
-      }),
+      on_chat_model_end: {
+        handle: (_event, data, metadata) => {
+          const usage = data?.output?.usage_metadata;
+          if (usage) {
+            const currentNode = metadata?.langgraph_node;
+            if (
+              typeof currentNode === 'string' &&
+              currentNode.startsWith(GraphNodeKeys.SUMMARIZE)
+            ) {
+              usage.usage_type = 'summarization';
+            }
+            collectedUsage.push(usage);
+            const target = isStreaming ? tracker : aggregator;
+            target.usage.promptTokens += usage.input_tokens ?? 0;
+            target.usage.completionTokens += usage.output_tokens ?? 0;
+          }
+        },
+      },
       on_run_step_completed: createHandler(),
       // Use proper ToolEndHandler for processing artifacts (images, file citations, code output)
       on_tool_end: new ToolEndHandler(toolEndCallback, logger),
