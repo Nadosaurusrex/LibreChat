@@ -1069,11 +1069,11 @@ class AgentClient extends BaseClient {
 
       const toolSet = buildToolSet(this.options.agent);
       const tokenCounter = createTokenCounter(this.getEncoding());
-      let { messages: initialMessages, indexTokenCountMap } = formatAgentMessages(
-        payload,
-        this.indexTokenCountMap,
-        toolSet,
-      );
+      let {
+        messages: initialMessages,
+        indexTokenCountMap,
+        summary: initialSummary,
+      } = formatAgentMessages(payload, this.indexTokenCountMap, toolSet);
       indexTokenCountMap = hydrateMissingIndexTokenCounts({
         messages: initialMessages,
         indexTokenCountMap,
@@ -1136,6 +1136,7 @@ class AgentClient extends BaseClient {
           agents,
           messages,
           indexTokenCountMap,
+          initialSummary,
           runId: this.responseMessageId,
           signal: abortController.signal,
           customHandlers: this.options.eventHandlers,
