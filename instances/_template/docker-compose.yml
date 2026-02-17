@@ -1,0 +1,53 @@
+# {{INSTANCE_NAME}} instance overrides
+# Usage: docker compose --project-directory . -f ../../shared/docker-compose.base.yml -f docker-compose.yml up -d
+
+services:
+  librechat:
+    container_name: llm-{{INSTANCE_SLUG}}-librechat
+    ports:
+      - "{{LIBRECHAT_PORT}}:3080"
+    env_file:
+      - .env
+    volumes:
+      - ./.env:/app/.env:ro
+      - ./librechat.yaml:/app/librechat.yaml:ro
+      - {{INSTANCE_SLUG}}_uploads:/app/uploads
+
+  litellm:
+    container_name: llm-{{INSTANCE_SLUG}}-litellm
+    ports:
+      - "{{LITELLM_PORT}}:4000"
+    env_file:
+      - .env
+
+  rag_api:
+    container_name: llm-{{INSTANCE_SLUG}}-rag-api
+    env_file:
+      - .env
+    volumes:
+      - {{INSTANCE_SLUG}}_uploads:/app/uploads
+
+  vectordb:
+    container_name: llm-{{INSTANCE_SLUG}}-vectordb
+    env_file:
+      - .env
+    volumes:
+      - {{INSTANCE_SLUG}}_vectordb_data:/var/lib/postgresql/data
+
+  mongodb:
+    container_name: llm-{{INSTANCE_SLUG}}-mongodb
+    volumes:
+      - {{INSTANCE_SLUG}}_mongodb_data:/data/db
+
+  meilisearch:
+    container_name: llm-{{INSTANCE_SLUG}}-meilisearch
+    env_file:
+      - .env
+    volumes:
+      - {{INSTANCE_SLUG}}_meilisearch_data:/meili_data
+
+volumes:
+  {{INSTANCE_SLUG}}_uploads:
+  {{INSTANCE_SLUG}}_vectordb_data:
+  {{INSTANCE_SLUG}}_mongodb_data:
+  {{INSTANCE_SLUG}}_meilisearch_data:

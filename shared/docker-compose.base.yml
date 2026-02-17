@@ -1,0 +1,51 @@
+# Base services shared across all instances
+# Usage: docker compose --project-directory . -f ../../shared/docker-compose.base.yml -f docker-compose.yml up -d
+
+services:
+  librechat:
+    image: ghcr.io/danny-avila/librechat:latest
+    depends_on:
+      - mongodb
+      - meilisearch
+      - rag_api
+      - litellm
+    restart: unless-stopped
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    volumes:
+      - ../../shared/litellm_config.yaml:/app/config.yaml:ro
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+    restart: unless-stopped
+
+  rag_api:
+    image: ghcr.io/danny-avila/librechat-rag-api-dev:latest
+    depends_on:
+      - vectordb
+    entrypoint: ["/bin/sh", "-c", "pip install --quiet pymupdf && python main.py"]
+    volumes:
+      - ../../shared/document_loader.py:/app/app/utils/document_loader.py:ro
+    restart: unless-stopped
+
+  vectordb:
+    image: pgvector/pgvector:0.8.0-pg17
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:8.0
+    restart: unless-stopped
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.12.3
+    environment:
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+    restart: unless-stopped

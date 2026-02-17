@@ -1,0 +1,14 @@
+use_default_settings: true
+
+server:
+  secret_key: "CHANGE_ME_GENERATE_WITH_openssl_rand_hex_32"
+  limiter: false
+  image_proxy: false
+
+search:
+  formats:
+    - html
+    - json
+
+redis:
+  url: redis://redis:6379/0

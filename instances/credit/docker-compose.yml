@@ -1,0 +1,53 @@
+# Credit rating instance overrides
+# Usage: docker compose --project-directory . -f ../../shared/docker-compose.base.yml -f docker-compose.yml up -d
+
+services:
+  librechat:
+    container_name: llm-credit-librechat
+    ports:
+      - "3080:3080"
+    env_file:
+      - .env
+    volumes:
+      - ./.env:/app/.env:ro
+      - ./librechat.yaml:/app/librechat.yaml:ro
+      - credit_uploads:/app/uploads
+
+  litellm:
+    container_name: llm-credit-litellm
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env
+
+  rag_api:
+    container_name: llm-credit-rag-api
+    env_file:
+      - .env
+    volumes:
+      - credit_uploads:/app/uploads
+
+  vectordb:
+    container_name: llm-credit-vectordb
+    env_file:
+      - .env
+    volumes:
+      - credit_vectordb_data:/var/lib/postgresql/data
+
+  mongodb:
+    container_name: llm-credit-mongodb
+    volumes:
+      - credit_mongodb_data:/data/db
+
+  meilisearch:
+    container_name: llm-credit-meilisearch
+    env_file:
+      - .env
+    volumes:
+      - credit_meilisearch_data:/meili_data
+
+volumes:
+  credit_uploads:
+  credit_vectordb_data:
+  credit_mongodb_data:
+  credit_meilisearch_data:

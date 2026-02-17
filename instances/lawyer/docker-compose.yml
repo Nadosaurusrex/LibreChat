@@ -1,0 +1,69 @@
+# Lawyer instance overrides
+# Usage: docker compose --project-directory . -f ../../shared/docker-compose.base.yml -f docker-compose.yml up -d
+
+services:
+  librechat:
+    container_name: llm-lawyer-librechat
+    ports:
+      - "3081:3080"
+    depends_on:
+      - searxng
+    env_file:
+      - .env
+    volumes:
+      - ./.env:/app/.env:ro
+      - ./librechat.yaml:/app/librechat.yaml:ro
+      - lawyer_uploads:/app/uploads
+
+  litellm:
+    container_name: llm-lawyer-litellm
+    ports:
+      - "4001:4000"
+    env_file:
+      - .env
+
+  rag_api:
+    container_name: llm-lawyer-rag-api
+    env_file:
+      - .env
+    volumes:
+      - lawyer_uploads:/app/uploads
+
+  vectordb:
+    container_name: llm-lawyer-vectordb
+    env_file:
+      - .env
+    volumes:
+      - lawyer_vectordb_data:/var/lib/postgresql/data
+
+  mongodb:
+    container_name: llm-lawyer-mongodb
+    volumes:
+      - lawyer_mongodb_data:/data/db
+
+  meilisearch:
+    container_name: llm-lawyer-meilisearch
+    env_file:
+      - .env
+    volumes:
+      - lawyer_meilisearch_data:/meili_data
+
+  searxng:
+    image: searxng/searxng:latest
+    container_name: llm-lawyer-searxng
+    depends_on:
+      - redis
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+    restart: unless-stopped
+
+  redis:
+    image: valkey/valkey:8-alpine
+    container_name: llm-lawyer-redis
+    restart: unless-stopped
+
+volumes:
+  lawyer_uploads:
+  lawyer_vectordb_data:
+  lawyer_mongodb_data:
+  lawyer_meilisearch_data:

@@ -80,6 +80,10 @@ librechat.yml
 my.secrets
 !**/.env.example
 !**/.env.test.example
+
+# Instance secrets (covered by .env* above, explicit for clarity)
+instances/*/.env
+instances/**/.env
 cache.json
 api/data/
 owner.yml
