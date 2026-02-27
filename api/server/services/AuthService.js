@@ -7,6 +7,7 @@ const {
   DEFAULT_REFRESH_TOKEN_EXPIRY,
 } = require('@librechat/data-schemas');
 const { ErrorTypes, SystemRoles, errorsToString } = require('librechat-data-provider');
+const { notifyTelegram } = require('~/server/utils/notifyTelegram');
 const {
   math,
   isEnabled,
@@ -231,6 +232,7 @@ const registerUser = async (user, additionalData = {}) => {
 
     const newUser = await createUser(newUserData, appConfig.balance, disableTTL, true);
     newUserId = newUser._id;
+    notifyTelegram(`🆕 New registration\nName: ${name}\nEmail: ${email}`).catch(() => {});
     if (emailEnabled && !newUser.emailVerified) {
       await sendVerificationEmail({
         _id: newUserId,

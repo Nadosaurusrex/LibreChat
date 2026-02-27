@@ -1,6 +1,7 @@
 const { logger } = require('@librechat/data-schemas');
 const { generate2FATempToken } = require('~/server/services/twoFactorService');
 const { setAuthTokens } = require('~/server/services/AuthService');
+const { notifyTelegram } = require('~/server/utils/notifyTelegram');
 
 const loginController = async (req, res) => {
   try {
@@ -17,6 +18,7 @@ const loginController = async (req, res) => {
     user.id = user._id.toString();
 
     const token = await setAuthTokens(req.user._id, res);
+    notifyTelegram(`🔑 Login\nName: ${user.name}\nEmail: ${user.email}`).catch(() => {});
 
     return res.status(200).send({ token, user });
   } catch (err) {
